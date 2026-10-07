@@ -75,73 +75,20 @@ try {
     requestId: saved.request_id,
   });
   assert.equal(replay.value.appointment.id, saved.id);
-  const { value: call, status } = await api("/api/calls", {});
-  assert.equal(status, 200);
-  const followup = await api("/api/tools", {
-    callId: call.id,
-    toolCallId: "follow-up",
-    name: "request_human",
-    args: { reason: "Synthetic QA follow-up" },
-  });
-  assert.equal(followup.status, 200);
-  const transcript = [
-    {
-      role: "system",
-      text: "Synthetic API verification finished.",
-      time: new Date().toISOString(),
-    },
-  ];
-  assert.equal(
-    (
-      await api(
-        "/api/calls",
-        {
-          id: call.id,
-          status: "completed",
-          duration: 4,
-          transcript,
-          outcome: "Conversation",
-        },
-        "PUT",
-      )
-    ).status,
-    200,
-  );
-  assert.equal(
-    (
-      await api(
-        "/api/calls",
-        {
-          id: call.id,
-          status: "active",
-          duration: 1,
-          transcript: [],
-          outcome: "Conversation",
-        },
-        "PUT",
-      )
-    ).status,
-    200,
-  );
-  const checked = (await api("/api/dashboard")).value.calls.find(
-    (c) => c.id === call.id,
-  );
-  assert.equal(checked.status, "completed");
-  assert.ok(checked.ended_at);
-  assert.equal(checked.duration_seconds, 4);
-  assert.equal(checked.outcome, "Follow-up: Synthetic QA follow-up");
-  assert.deepEqual(JSON.parse(checked.transcript), transcript);
+  assert.equal((await api("/api/calls", {})).status, 405);
   assert.equal(
     (
       await api("/api/tools", {
-        callId: call.id,
-        toolCallId: "late-action",
+        callId: "not-a-real-call",
+        toolCallId: "late",
         name: "request_human",
-        args: { reason: "Must be rejected" },
+        args: { reason: "Must not be saved" },
       })
     ).status,
     409,
   );
+  assert.equal((await api("/api/settings", null, "PUT")).status, 400);
+  assert.equal((await api("/api/calls?before=invalid")).status, 400);
 } finally {
   assert.equal(
     (await api("/api/appointments/" + saved.id, {}, "DELETE")).status,
@@ -157,5 +104,5 @@ const restored = await api(
 );
 assert.ok(restored.value.slots.some((s) => s.time === input.time));
 console.log(
-  "API smoke checks passed: authentication, origin validation, missing key, D1 overlap race, replay, cancellation, terminal calls, durable follow-up, ended-call action rejection. Synthetic local history retained.",
+  "API smoke checks passed: authentication, origin validation, missing key, D1 overlap race, replay, cancellation, rejected unissued calls, strict JSON bodies and history cursors. Synthetic local history retained.",
 );

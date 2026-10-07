@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "@fontsource-variable/space-grotesk";
 
 export const metadata: Metadata = {
   title: "Aria · AI Voice Receptionist",
   description:
-    "A warm welcome, every time. A Gemini-powered voice receptionist for Studio & Strand.",
+    "Your AI reception desk: live conversations, reliable appointments, and private call history, powered by Gemini.",
   other: {
     "codex-preview": "development",
   },

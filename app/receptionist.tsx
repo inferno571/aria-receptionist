@@ -87,6 +87,7 @@ type Dashboard = {
   calls: CallRecord[];
   business: Business;
   hasServerKey: boolean;
+  nextCursor: string | null;
 };
 async function request<T = unknown>(
   path: string,
@@ -152,6 +153,10 @@ export default function Receptionist() {
   const [saving, setSaving] = useState(false);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [calls, setCalls] = useState<CallRecord[]>([]);
+  const [historyCursor, setHistoryCursor] = useState<string | null>(null);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [deleteCallId, setDeleteCallId] = useState<string | null>(null);
+  const [deletingCall, setDeletingCall] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [state, setState] = useState<LiveState>("idle");
@@ -188,6 +193,7 @@ export default function Receptionist() {
         .then((d) => {
           setAppointments(d.appointments);
           setCalls(d.calls);
+          setHistoryCursor(d.nextCursor);
           setBusiness(d.business);
           setHasServerKey(d.hasServerKey);
           setLoadError("");
@@ -289,6 +295,41 @@ export default function Receptionist() {
   function openSettings() {
     setDraft(business);
     setSettingsOpen(true);
+  }
+  async function moreHistory() {
+    if (!historyCursor || historyLoading) return;
+    setHistoryLoading(true);
+    try {
+      const d = await request<{
+        calls: CallRecord[];
+        nextCursor: string | null;
+      }>(`/api/calls?before=${encodeURIComponent(historyCursor)}`);
+      setCalls((c) => [
+        ...c,
+        ...d.calls.filter((item) => !c.some((old) => old.id === item.id)),
+      ]);
+      setHistoryCursor(d.nextCursor);
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+  async function deleteHistory() {
+    if (!deleteCallId) return;
+    setDeletingCall(true);
+    try {
+      await request(`/api/calls/${deleteCallId}`, {}, "DELETE");
+      setViewing(null);
+      setDeleteCallId(null);
+      await refresh();
+      setTab("history");
+      toast.success("Call transcript deleted");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setDeletingCall(false);
+    }
   }
   async function saveSettings() {
     setSaving(true);
@@ -486,7 +527,7 @@ export default function Receptionist() {
             <span className="avatar">SS</span>
             <div>
               <strong>Studio workspace</strong>
-              <small>Private demo</small>
+              <small>Private workspace</small>
             </div>
             <ShieldCheck size={17} />
           </div>
@@ -508,9 +549,9 @@ export default function Receptionist() {
           <div className="page-heading">
             <div>
               <p className="eyebrow">YOUR AI FRONT DESK</p>
-              <h1>A warm welcome. Every time.</h1>
+              <h1>Your reception desk.</h1>
               <p>
-                Let Aria handle the conversation. You take care of your clients.
+                Take calls, manage appointments, and follow up in one place.
               </p>
             </div>
             <span className="outline-badge">
@@ -536,7 +577,7 @@ export default function Receptionist() {
                   Meet your receptionist
                 </span>
                 <span className="soft-badge">
-                  {active ? duration(seconds) : "VOICE PREVIEW"}
+                  {active ? duration(seconds) : "LIVE VOICE"}
                 </span>
               </div>
               <div className="orb-wrap">
@@ -616,7 +657,7 @@ export default function Receptionist() {
                 {active
                   ? "You’re speaking with an AI receptionist"
                   : apiKey || hasServerKey
-                    ? "Use headphones for the best experience"
+                    ? "Audio goes to Google. Your transcript is saved privately."
                     : "Add a Gemini key to start · free tier available"}
               </p>
               {voiceError && (
@@ -679,6 +720,12 @@ export default function Receptionist() {
                       </span>
                       <button onClick={() => setViewing(null)}>
                         Back to live
+                      </button>
+                      <button
+                        disabled={viewing.status === "active"}
+                        onClick={() => setDeleteCallId(viewing.id)}
+                      >
+                        Delete transcript
                       </button>
                     </div>
                   )}
@@ -766,6 +813,15 @@ export default function Receptionist() {
                         will appear here.
                       </p>
                     </div>
+                  )}
+                  {historyCursor && (
+                    <button
+                      className="quiet-button history-more"
+                      disabled={historyLoading}
+                      onClick={() => void moreHistory()}
+                    >
+                      {historyLoading ? "Loading…" : "Load older calls"}
+                    </button>
                   )}
                 </TabsContent>
               </Tabs>
@@ -883,6 +939,7 @@ export default function Receptionist() {
               first hello.
             </span>
             <span>{business.address} · Asia/Kolkata</span>
+            <a href="/signout-with-chatgpt?return_to=/">Sign out</a>
           </footer>
         </div>
       </main>
@@ -899,11 +956,15 @@ export default function Receptionist() {
               <KeyRound size={16} />
               <strong>Gemini connection</strong>
               <span className="soft-badge">
-                {hasServerKey ? "SERVER KEY SET" : "SESSION KEY"}
+                {apiKey.trim()
+                  ? "YOUR KEY"
+                  : hasServerKey
+                    ? "SHARED CONNECTION"
+                    : "ADD A KEY"}
               </span>
             </div>
             <label className="field-label" htmlFor="gemini-key">
-              Gemini API key
+              Your Gemini API key (optional)
             </label>
             <input
               id="gemini-key"
@@ -913,14 +974,15 @@ export default function Receptionist() {
               onChange={(e) => setApiKey(e.target.value)}
               placeholder={
                 hasServerKey
-                  ? "Server key configured"
+                  ? "Leave blank to use the shared connection"
                   : "Paste your Gemini API key"
               }
               autoComplete="off"
             />
             <p className="field-help">
-              Used to create a short-lived voice token. Your key is never saved
-              in browser storage or the database. It clears when you reload.
+              Your key takes priority over the shared connection and clears on
+              reload. It is never saved in browser storage or the database.
+              Clear this field to return to the shared connection.
             </p>
             <a
               className="text-link"
@@ -963,9 +1025,10 @@ export default function Receptionist() {
               onChange={(e) => setDraft({ ...draft, greeting: e.target.value })}
             />
             <p className="field-help">
-              Model: gemini-3.8-live. Google’s free-tier limits apply. Your
-              Google project’s billing settings determine charges; Aria does not
-              change them.
+              Shared connection: up to 5 starts per user per day, subject to
+              global capacity. Sessions last up to 12 minutes. Personal keys use
+              your Google project&apos;s quota and billing settings. Model:
+              gemini-3.8-live.
             </p>
           </div>
           <button
@@ -987,6 +1050,36 @@ export default function Receptionist() {
           )}
         </DialogContent>
       </Dialog>
+      <AlertDialog
+        open={!!deleteCallId}
+        onOpenChange={(open) => {
+          if (!open && !deletingCall) setDeleteCallId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this call transcript?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the transcript and follow-up note.
+              Appointments remain in your calendar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingCall}>
+              Keep transcript
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deletingCall}
+              onClick={(e) => {
+                e.preventDefault();
+                void deleteHistory();
+              }}
+            >
+              Delete transcript
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <Dialog
         open={bookingOpen}
         onOpenChange={(open) => {

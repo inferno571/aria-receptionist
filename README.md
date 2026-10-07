@@ -1,38 +1,46 @@
 # Aria — AI voice receptionist
 
-An AI receptionist that listens to a customer, checks the salon's calendar, and books a confirmed appointment. The owner can inspect transcripts, see follow-up requests, and manage the calendar from one dashboard.
+[Live app](https://aria-voice-receptionist.inferno-sooden.chatgpt.site) · [Architecture](docs/architecture.md) · [Security](SECURITY.md)
 
-Built with **Gemini 3.8 Live**, TypeScript, React, Vinext, Cloudflare Workers, and D1/SQLite. No OpenAI API or paid fallback model is used.
+Aria talks to customers, checks a salon's availability, and books confirmed appointments. Each signed-in user gets a separate workspace with an appointment calendar, transcripts, and follow-up notes.
+
+Built with **Gemini 3.8 Live**, TypeScript, React, Vinext, Cloudflare Workers and D1/SQLite. The interface uses self-hosted Space Grotesk. No OpenAI API is used.
 
 ## Run locally
 
-Requires Node.js 24+ (the tests use `node:sqlite`) and npm. From this directory:
+Requires Node.js 24+ and npm. On a fresh database, run both migrations in order once:
 
 ```powershell
 npm ci
 npm run build
 node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_narrow_timeslip.sql
+node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0001_spicy_baron_zemo.sql
 npm run dev
 ```
 
-Run the initial migration **once on a fresh local database**, not on each start. It has already been applied in this checkout. Open the localhost URL printed by the server. Development sign-in is simulated for loopback requests; hosted sign-in uses the authenticated Sites owner. Local data stays in the ignored `.wrangler/state` directory and is not uploaded to the hosted database.
+Both migrations are already applied in the original development checkout. Open the URL printed by the server. Loopback development uses a simulated sign-in; production uses Sites' authenticated identity gateway. Local data is stored in ignored `.wrangler/state` and is never uploaded with the source.
 
-The calendar works without a Gemini key. For voice, open **Configure assistant**, get an API key from [Google AI Studio](https://aistudio.google.com/apikey), and paste it into the password field. The key stays in page memory until reload and is sent over HTTPS to the app's token endpoint. That endpoint exchanges it with Google for a constrained, short-lived Live token. The long-lived key is not written to browser storage or the database.
+## Gemini connection
 
-Alternatively copy `.env.example` to `.env` and set `GEMINI_API_KEY` locally. Never use a public-prefixed environment variable or commit a key. A server key takes precedence over the session key. Configure hosted keys as deployment secrets; this repository ships without a key.
+Configure `GEMINI_API_KEY` as a **hosted secret** for shared voice access. For local use, copy `.env.example` to `.env` and provide your own key. Never use `NEXT_PUBLIC_` or `VITE_` for secrets.
 
-Use headphones, allow microphone access, then say: “I'd like a haircut tomorrow afternoon.” Supply a fictional name and phone for a portfolio demo, and confirm the details when Aria reads them back. The appointment appears in the calendar only after the server commits it. Browser refresh preserves bookings and saved call history.
+Users may enter a personal key in **Configure assistant**. It takes precedence over the shared connection, remains in page memory only, and clears on reload. A rejected personal key never silently uses the shared key. Clear the field to use shared access again. Keys are exchanged server-side with Google for constrained, single-use ephemeral tokens; long-lived keys are never returned by an API or stored in the database.
 
-## What makes it more than a chatbot
+Shared access permits five starts per user per UTC day, 40 starts globally per day, and five unexpired shared permits at once. Each user may hold two unexpired permits and start 12 sessions per UTC hour. Calls last up to 12 minutes; provider credentials expire after 15 minutes. Ending/deleting a call does not prematurely release a token permit. Authenticated writes are limited to 80 per UTC minute. See [operating limits](SECURITY.md).
 
-- **Real audio streaming:** an AudioWorklet captures mono PCM16 at 16 kHz; Gemini returns 24 kHz audio with input/output transcription. Interrupting Aria clears pending playback. Mute and end controls release the microphone.
-- **Reliable booking:** appointments reserve every occupied 15-minute interval in a D1 transaction. A database uniqueness constraint makes overlapping bookings mutually exclusive, even when requests race.
-- **Safe retries:** an owner-scoped idempotency key returns the original result after a lost response. Reusing that key with changed details fails. Cancellation releases all occupied intervals atomically.
-- **Recovery:** resumable Live sessions, generation checks against old sockets, queued tool responses during reconnect, serialized transcript checkpoints, and terminal call states that cannot be reopened by delayed writes.
-- **Server authority:** tools validate service, staff, time, phone, ownership and confirmation. Follow-up outcomes are server-owned and cannot be erased by transcript saves. A follow-up retains priority over a later booking outcome.
-- **Scoped data:** authenticated owner scoping on every API and calendar row; same-origin JSON mutations; constrained ephemeral credentials. The model receives business context and available times, not other customers' records.
+Google offers a [Gemini Live free tier](https://ai.google.dev/gemini-api/docs/pricing), subject to account eligibility and quota. Personal keys follow their Google project's billing settings. These app limits are not a guaranteed monetary spending cap.
 
-See [architecture and tradeoffs](docs/architecture.md) and the [evaluation plan](docs/evaluation.md).
+## Engineering features
+
+- **Streaming audio:** AudioWorklet capture/resampling to mono PCM16 at 16 kHz, 24 kHz playback, transcription, interruption, mute, and microphone cleanup.
+- **Transactional bookings:** every occupied 15-minute interval is reserved in an atomic D1 batch. A composite primary key prevents overlapping appointments under concurrent requests.
+- **Idempotency:** repeated requests return the original booking; changed payloads with the same key fail. Cancellation atomically releases occupied intervals.
+- **Session admission:** shared/user quotas, conservative token permits, fixed expiry, heartbeat authorization, abandoned-call reconciliation and bounded HTTP requests.
+- **Recovery:** connection generations reject stale socket callbacks; tool responses wait for reconnection; serialized checkpoints and terminal-state guards prevent stale transcript writes.
+- **Private workspaces:** owner-scoped APIs and rows, same-origin mutations, limited model tools, cursor-based call history, and permanent transcript deletion.
+- **Bounded transcripts:** long turns split safely; very long histories show an explicit trimming notice instead of silently failing to save.
+
+The model proposes actions; the server checks ownership, service, staff, date, hours, contact fields, confirmation flag and occupancy before committing. Spoken confirmation itself is model-interpreted; see the evaluation plan before customer use.
 
 ## Verification
 
@@ -40,37 +48,41 @@ See [architecture and tradeoffs](docs/architecture.md) and the [evaluation plan]
 npm test
 npm run typecheck
 npm run build
-# With the local development server running:
+# With the local server running:
 node scripts/smoke-test.mjs
+# Optional: enter a real key through hidden stdin, never as a command argument:
+node scripts/verify-provider.mjs
 ```
 
-The test suite covers 16 booking, isolation, time-zone, PCM, recovery and transcript-ordering cases. The smoke workflow exercises authenticated APIs against the local D1 runtime, including simultaneous conflicting bookings, repeated cancellation, missing-key errors and a delayed active save after a completed call. It leaves clearly labeled synthetic call history and a cancelled test appointment locally.
+The suite contains 29 tests covering booking races, isolation, time zones, PCM, shared quotas, expiry, deletion, transcript limits, parsing and recovery. API smoke checks use local D1. On 2026-10-07, a real provider check verified ephemeral-token issuance, audio generation, and an availability tool call with `gemini-3.8-live`, using synthetic conversation content and no microphone.
 
-Live model quality, actual microphone/device behavior, service latency and provider quota exhaustion need a real Gemini key and the manual evaluation. Do not claim measured booking accuracy, latency, call volume or cost savings before running it.
+Actual microphone/device behavior, booking quality, forced-network resumption, latency and provider quota exhaustion still need the [manual evaluation](docs/evaluation.md). No measured accuracy, savings or latency SLA is claimed. GitHub Actions runs tests, TypeScript checks and a production build on pushes and pull requests.
 
-## Scope and cost
+## Product scope
 
-This is an owner-private **browser voice demo**, not a public phone number or PSTN call center. Services, staff, hours and IST are an explicit single-salon configuration. The calendar supports the next 30 days; the dashboard shows the next 100 appointments and most recent 20 calls. Calls stop after 12 minutes. There is no SMS, email, payment processing, calendar sync or live human transfer; a human request creates an owner-visible note.
+This release is a **browser voice application** with public sign-in and isolated workspaces. It does not provision a phone number or connect to the PSTN. It has no SMS, email, payments, calendar sync or live human transfer; human assistance saves an owner-visible follow-up note.
 
-Google lists a free tier for [Gemini 3.8 Live](https://ai.google.dev/gemini-api/docs/models/gemini-3.8-live), subject to project eligibility and [quotas/pricing](https://ai.google.dev/gemini-api/docs/pricing). Aria does not enable billing or switch to a paid model, but a billing-enabled Google project follows its own plan. Audio and conversational content go to Google; free-tier data treatment follows Google's current terms. Use synthetic customer information for demonstrations. Raw audio is not stored by Aria; transcripts and booking contact information persist in the private database.
+Services, two stylists, opening hours and IST are defined in `lib/domain.ts`. Business name/location/greeting are editable. Bookings cover the next 30 days; the dashboard displays the next 100 appointments. History is paginated 20 calls at a time. Raw audio is not stored by Aria; transcripts and booking contact details persist in the database. Deleting a transcript removes its text and follow-up note, not related appointments. Google's processing terms apply to audio sent to Gemini.
 
-## Resume wording
+## Deployment
 
-“Built Aria, a real-time AI voice receptionist using Gemini Live, TypeScript and Cloudflare D1, with streaming audio, tool-driven appointment booking, transactional conflict prevention, idempotent retries, and automated recovery tests.”
-
-Use that wording after you can demonstrate and explain the system. Add performance numbers only after measuring them. For an interviewer: **“It lets a busy salon take bookings by voice, while preventing two people from getting the same appointment.”**
+GitHub hosts the source. **GitHub Pages cannot run this Worker/D1 backend.** Deploy through Sites, apply the tracked Drizzle migrations, configure secrets in the hosting environment, and preserve the trusted identity gateway. Never expose this Worker directly elsewhere without implementing verified authentication. A GitHub push runs CI; it does not automatically redeploy the live app.
 
 ## Source guide
 
-| File | Responsibility |
+| Location | Responsibility |
 | --- | --- |
-| `app/receptionist.tsx` | Dashboard, dialogs, calendar, live transcript |
-| `lib/live-client.ts` | Audio/session lifecycle and tool dispatch |
-| `public/pcm-capture.js`, `lib/audio.ts` | Capture, resampling, playback and interruption |
-| `lib/gemini-config.ts` | Grounded instructions and typed Gemini tools |
-| `app/api/live-token/route.ts` | Server-only ephemeral-token exchange |
+| `app/receptionist.tsx` | Dashboard, dialogs, history and calendar |
+| `lib/live-client.ts` | Audio/session lifecycle and tool delivery |
+| `public/pcm-capture.js`, `lib/audio.ts` | PCM capture, playback and interruption |
+| `lib/gemini-config.ts`, `lib/gemini-token.ts` | Model instructions, tools and token constraints |
+| `lib/call-store.ts`, `lib/voice-policy.ts` | Session admission, limits and lifecycle |
 | `lib/booking.ts`, `db/schema.ts` | Booking invariants and persistence |
-| `app/api/tools/route.ts` | Authenticated, validated model actions |
-| `tests/`, `scripts/smoke-test.mjs` | Regression and API verification |
+| `app/api/` | Authenticated APIs |
+| `tests/`, `scripts/` | Verification and local tooling |
 
-Deployment uses the included Sites configuration, Workers output in `dist/server`, and the generated migration in `drizzle/`. Preserve the Vite/Sites build integration when extending it.
+## Resume description
+
+Built a real-time AI receptionist with Gemini Live and Cloudflare D1, implementing streaming audio, tool-driven booking, transactional conflict prevention, idempotent retries, tenant isolation and automated recovery tests.
+
+For a nontechnical interviewer: **“It lets a busy salon take bookings by voice while preventing two people from getting the same appointment.”**

@@ -5,7 +5,9 @@ import {
   uniqueIndex,
   index,
   primaryKey,
+  check,
 } from "drizzle-orm/sqlite-core";
+import { sql } from "drizzle-orm";
 export const appointments = sqliteTable(
   "appointments",
   {
@@ -56,8 +58,30 @@ export const calls = sqliteTable(
     durationSeconds: integer("duration_seconds").notNull().default(0),
     transcript: text("transcript").notNull().default("[]"),
     outcome: text("outcome").notNull().default("Conversation"),
+    expiresAt: text("expires_at").notNull().default(""),
+    permitUntil: text("permit_until").notNull().default(""),
+    lastSeenAt: text("last_seen_at").notNull().default(""),
+    keySource: text("key_source").notNull().default("unknown"),
+    tokenState: text("token_state").notNull().default("none"),
+    deletedAt: text("deleted_at"),
   },
-  (t) => [index("calls_owner_date").on(t.owner, t.startedAt)],
+  (t) => [
+    index("calls_owner_date").on(t.owner, t.startedAt),
+    index("calls_permits").on(t.keySource, t.permitUntil, t.tokenState),
+  ],
+);
+export const usageBudgets = sqliteTable(
+  "usage_budgets",
+  {
+    bucket: text("bucket").primaryKey(),
+    used: integer("used").notNull(),
+    maxCount: integer("max_count").notNull(),
+    expiresAt: text("expires_at").notNull(),
+  },
+  (t) => [
+    check("usage_within_budget", sql`${t.used} <= ${t.maxCount}`),
+    index("usage_expiry").on(t.expiresAt),
+  ],
 );
 export const settings = sqliteTable("settings", {
   owner: text("owner").primaryKey(),

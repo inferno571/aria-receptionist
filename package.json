@@ -1,9 +1,9 @@
 {
   "name": "aria-voice-receptionist",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "engines": {
-    "node": ">=22.13.0"
+    "node": ">=24.0.0"
   },
   "scripts": {
     "test": "node --experimental-strip-types --test tests/*.test.ts",
@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
+    "@fontsource-variable/space-grotesk": "5.2.10",
     "@google/genai": "^2.27.0",
     "@hookform/resolvers": "^5.7.1",
     "@shadcn/react": "^0.3.0",

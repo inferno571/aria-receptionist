@@ -6,6 +6,7 @@ import type {
 } from "@google/genai";
 import { AudioOutput, pcmToBase64 } from "./audio.ts";
 import type { TranscriptLine } from "./domain";
+import { appendTranscript } from "./transcript.ts";
 export type LiveState =
   | "idle"
   | "connecting"
@@ -30,6 +31,7 @@ async function api<T = unknown>(
     method,
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
+    signal: AbortSignal.timeout(30000),
   });
   const result = (await response.json()) as T & { error?: string };
   if (!response.ok) throw new Error(result.error || "Request failed.");
@@ -118,17 +120,17 @@ export class LiveReceptionist {
         token: string;
         config: LiveConnectConfig;
         model: string;
+        callId: string;
+        expiresAt: string;
       }>("/api/live-token", { apiKey });
-      if (!this.running) return;
-      this.token = auth.token;
-      this.config = auth.config;
-      this.model = auth.model;
-      const call = await api<{ id: string }>("/api/calls", {});
-      this.callId = call.id;
+      this.callId = auth.callId;
       if (!this.running) {
         await this.save("completed");
         return;
       }
+      this.token = auth.token;
+      this.config = auth.config;
+      this.model = auth.model;
       await this.connect(false);
       if (!this.running) return;
       await this.input.audioWorklet.addModule("/pcm-capture.js");
@@ -165,13 +167,16 @@ export class LiveReceptionist {
         if (Math.floor((Date.now() - this.started) / 1000) % 15 === 0)
           void this.save("active");
       }, 1000);
-      this.maxTimer = setTimeout(() => {
-        this.line(
-          "system",
-          "The 12-minute demo call limit was reached. Start a new call to continue.",
-        );
-        void this.stop();
-      }, 12 * 60000);
+      this.maxTimer = setTimeout(
+        () => {
+          this.line(
+            "system",
+            "This session has reached its 12-minute limit. Start another conversation to continue.",
+          );
+          void this.stop();
+        },
+        Math.max(0, Date.parse(auth.expiresAt) - Date.now()),
+      );
       this.handlers.onState("listening");
     } catch (e) {
       if (this.running) {
@@ -237,14 +242,13 @@ export class LiveReceptionist {
   }
   line(role: TranscriptLine["role"], text: string) {
     if (!text) return;
-    const last = this.transcript.at(-1);
-    if (role !== "system" && !this.segmentStart && last?.role === role) {
-      last.text += text;
-    } else {
-      this.transcript.push({ role, text, time: new Date().toISOString() });
-    }
+    this.transcript = appendTranscript(
+      this.transcript,
+      role,
+      text,
+      this.segmentStart,
+    );
     this.segmentStart = false;
-    this.transcript = this.transcript.slice(-250);
     this.handlers.onTranscript(this.transcript.map((x) => ({ ...x })));
   }
   async message(message: LiveServerMessage) {
@@ -333,7 +337,10 @@ export class LiveReceptionist {
         const response = await fetch("/api/tools", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          signal: controller.signal,
+          signal: AbortSignal.any([
+            controller.signal,
+            AbortSignal.timeout(15000),
+          ]),
           body: JSON.stringify({
             callId: this.callId,
             toolCallId: id,

@@ -47,9 +47,9 @@ Browser-provided transcripts are owner-visible records, not tamper-proof audit e
 
 ## Deliberate limits and next steps
 
-The current private demo has no public customer identity or telephone entry point. An owner controls the browser session. Multi-location calendars, configurable opening exceptions, retention/deletion controls, verified customer cancellation, consent policies, public endpoint rate limits, background reconciliation, telephony and notification delivery need explicit implementation before a public deployment. Use a durable queue/outbox for SMS or email so a committed booking cannot be followed by a silently lost notification.
+Each signed-in visitor owns an isolated salon workspace. Shared-key admission uses database check constraints and atomic D1 batches for user/global quotas; permits count until provider-token expiry even when calls end or transcripts are deleted. Booking tools require issued, unexpired sessions with a recent heartbeat. Reconciliation marks abandoned calls interrupted. History uses cursor pagination, and transcript deletion removes text and follow-up content while preserving permit metadata.
 
-The app records a completed or errored call when a clean stop occurs; an abruptly closed browser can leave its last checkpoint marked active. A production reconciliation job should mark abandoned calls ended after a heartbeat timeout. Call history is intentionally capped, so pagination/search is also future work. These limits do not weaken the booking uniqueness constraint.
+The production scope remains browser voice. Telephony, SMS/email, payments, multi-location scheduling and calendar synchronization are not implemented. Services, two staff members, operating hours and IST are fixed in `lib/domain.ts`. Real voice booking correctness and reconnection across forced network failure require manual evaluation; no accuracy or latency SLA is claimed. The dashboard currently displays the next 100 appointments.
 
 ## References
 

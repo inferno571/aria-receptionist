@@ -15,9 +15,9 @@ export async function PUT(request: Request) {
         );
     }
     const value = {
-      name: x.name.trim(),
-      address: x.address.trim(),
-      greeting: x.greeting.trim(),
+      name: (x.name as string).trim(),
+      address: (x.address as string).trim(),
+      greeting: (x.greeting as string).trim(),
     };
     await store()
       .db.prepare(

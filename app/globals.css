@@ -58,7 +58,7 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --font-sans: "Segoe UI", Arial, sans-serif;
+  --font-sans: "Space Grotesk Variable", "Segoe UI", sans-serif;
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
@@ -70,7 +70,7 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: "Segoe UI", Arial, sans-serif;
+  font-family: "Space Grotesk Variable", "Segoe UI", sans-serif;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
 }
@@ -89,9 +89,11 @@ button:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }
-button,
-a,
-input:focus-visible {
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
   outline: 2px solid #71935b;
   outline-offset: 4px;
 }
@@ -151,7 +153,7 @@ button:active {
   place-items: center;
   height: 34px;
   width: 34px;
-  font-family: Georgia, serif;
+  font-family: "Space Grotesk Variable", "Segoe UI", sans-serif;
   font-size: 20px;
 }
 .workspace strong,
@@ -201,7 +203,7 @@ button:active {
 }
 .side-note strong {
   display: block;
-  font-family: Georgia, serif;
+  font-family: "Space Grotesk Variable", "Segoe UI", sans-serif;
   font-size: 18px;
   font-weight: 400;
   color: #526448;
@@ -289,7 +291,7 @@ button:active {
   margin: 0 0 11px;
 }
 .page-heading h1 {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: "Space Grotesk Variable", "Segoe UI", sans-serif;
   font-size: 35px;
   font-weight: 400;
   letter-spacing: -1px;
@@ -417,7 +419,7 @@ button:active {
   bottom: 44px;
 }
 .voice-card h2 {
-  font-family: Georgia, serif;
+  font-family: "Space Grotesk Variable", "Segoe UI", sans-serif;
   font-size: 30px;
   line-height: 1.2;
   font-weight: 400;
@@ -527,7 +529,7 @@ button:active {
   margin-bottom: 21px;
 }
 .transcript-empty h3 {
-  font-family: Georgia, serif;
+  font-family: "Space Grotesk Variable", "Segoe UI", sans-serif;
   font-size: 21px;
   font-weight: 400;
   letter-spacing: -0.3px;
@@ -553,7 +555,7 @@ button:active {
   color: #859478;
 }
 .try-prompt p {
-  font-family: Georgia, serif;
+  font-family: "Space Grotesk Variable", "Segoe UI", sans-serif;
   font-style: italic;
   font-size: 15px;
   color: #6b7b5e;
@@ -662,7 +664,7 @@ button:active {
   gap: 8px;
 }
 .mini-mark {
-  font-family: Georgia, serif;
+  font-family: "Space Grotesk Variable", "Segoe UI", sans-serif;
   font-size: 19px;
   font-weight: bold;
   color: #a0af8e;
@@ -893,8 +895,20 @@ button:active {
   border-bottom: 1px solid #eef0e9;
 }
 .conversation-tabs [data-slot="tabs-trigger"] {
-  font-size: 13px;
-  padding-inline: 5px;
+  font-size: 14px;
+  min-height: 38px;
+  padding-inline: 12px;
+  outline: none;
+  box-shadow: none;
+  border: 0;
+}
+.conversation-tabs [data-slot="tabs-trigger"]:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+.conversation-tabs [data-slot="tabs-list"] {
+  height: auto;
+  gap: 8px;
 }
 .conversation-body {
   display: flex;
@@ -1043,7 +1057,7 @@ button:active {
 .appointment-date strong {
   display: block;
   font-size: 19px;
-  font-family: Georgia, serif;
+  font-family: "Space Grotesk Variable", "Segoe UI", sans-serif;
   font-weight: 400;
   line-height: 1.1;
 }
@@ -1253,4 +1267,13 @@ button:active {
   .conversation-tabs > .card-top {
     padding: 15px 13px;
   }
+}
+
+.history-more {
+  margin: 12px auto;
+  display: flex;
+}
+.history-view-label {
+  flex-wrap: wrap;
+  gap: 12px;
 }
