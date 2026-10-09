@@ -58,7 +58,7 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --font-sans: "Space Grotesk Variable", "Segoe UI", sans-serif;
+  --font-sans: "Open Sans", Helvetica, sans-serif;
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
@@ -70,7 +70,7 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--foreground);
-  font-family: "Space Grotesk Variable", "Segoe UI", sans-serif;
+  font-family: "Open Sans", Helvetica, sans-serif;
   font-size: 16px;
   -webkit-font-smoothing: antialiased;
 }
@@ -153,7 +153,7 @@ button:active {
   place-items: center;
   height: 34px;
   width: 34px;
-  font-family: "Space Grotesk Variable", "Segoe UI", sans-serif;
+  font-family: "Open Sans", Helvetica, sans-serif;
   font-size: 20px;
 }
 .workspace strong,
@@ -203,7 +203,7 @@ button:active {
 }
 .side-note strong {
   display: block;
-  font-family: "Space Grotesk Variable", "Segoe UI", sans-serif;
+  font-family: "Open Sans", Helvetica, sans-serif;
   font-size: 18px;
   font-weight: 400;
   color: #526448;
@@ -291,7 +291,7 @@ button:active {
   margin: 0 0 11px;
 }
 .page-heading h1 {
-  font-family: "Space Grotesk Variable", "Segoe UI", sans-serif;
+  font-family: "Open Sans", Helvetica, sans-serif;
   font-size: 35px;
   font-weight: 400;
   letter-spacing: -1px;
@@ -419,7 +419,7 @@ button:active {
   bottom: 44px;
 }
 .voice-card h2 {
-  font-family: "Space Grotesk Variable", "Segoe UI", sans-serif;
+  font-family: "Open Sans", Helvetica, sans-serif;
   font-size: 30px;
   line-height: 1.2;
   font-weight: 400;
@@ -529,7 +529,7 @@ button:active {
   margin-bottom: 21px;
 }
 .transcript-empty h3 {
-  font-family: "Space Grotesk Variable", "Segoe UI", sans-serif;
+  font-family: "Open Sans", Helvetica, sans-serif;
   font-size: 21px;
   font-weight: 400;
   letter-spacing: -0.3px;
@@ -555,7 +555,7 @@ button:active {
   color: #859478;
 }
 .try-prompt p {
-  font-family: "Space Grotesk Variable", "Segoe UI", sans-serif;
+  font-family: "Open Sans", Helvetica, sans-serif;
   font-style: italic;
   font-size: 15px;
   color: #6b7b5e;
@@ -664,7 +664,7 @@ button:active {
   gap: 8px;
 }
 .mini-mark {
-  font-family: "Space Grotesk Variable", "Segoe UI", sans-serif;
+  font-family: "Open Sans", Helvetica, sans-serif;
   font-size: 19px;
   font-weight: bold;
   color: #a0af8e;
@@ -1057,7 +1057,7 @@ button:active {
 .appointment-date strong {
   display: block;
   font-size: 19px;
-  font-family: "Space Grotesk Variable", "Segoe UI", sans-serif;
+  font-family: "Open Sans", Helvetica, sans-serif;
   font-weight: 400;
   line-height: 1.1;
 }
@@ -1276,4 +1276,80 @@ button:active {
 .history-view-label {
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.auth-page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 32px 20px;
+}
+.auth-card {
+  width: 100%;
+  max-width: 460px;
+  background: #fff;
+  padding: 40px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: 0 16px 50px #25372e08;
+}
+.auth-brand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 32px;
+  color: var(--primary);
+}
+.auth-card h1 {
+  font-size: 30px;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  font-weight: 700;
+  margin: 10px 0 16px;
+}
+.auth-intro {
+  color: var(--muted-foreground);
+  line-height: 1.65;
+  margin-bottom: 28px;
+}
+.auth-card form {
+  display: grid;
+  gap: 18px;
+}
+.auth-card label {
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.auth-card .primary-button {
+  justify-content: center;
+  min-height: 46px;
+}
+.auth-card .text-input {
+  width: 100%;
+}
+.auth-switch {
+  margin-top: 24px;
+  font-size: 14px;
+  text-align: center;
+}
+.auth-switch button {
+  background: none;
+  border: 0;
+  color: var(--primary);
+  text-decoration: underline;
+  padding: 4px;
+  font: inherit;
+}
+.auth-error {
+  color: var(--destructive);
+  font-size: 14px;
+}
+@media (max-width: 500px) {
+  .auth-card {
+    padding: 28px 24px;
+  }
 }

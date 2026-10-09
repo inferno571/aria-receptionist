@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { getChatGPTUser } from "@/app/chatgpt-auth";
+import { getUser } from "./auth";
 import { AppError } from "./domain";
 import { BookingStore } from "./booking";
 export { readJson as body } from "./request-body";
@@ -14,7 +14,7 @@ export async function owner(request: Request) {
     if (!request.headers.get("content-type")?.includes("application/json"))
       throw new AppError("Send JSON request data.", 415);
   }
-  const user = await getChatGPTUser();
+  const user = await getUser();
   if (!user) throw new AppError("Sign in to use your reception desk.", 401);
   if (request.method !== "GET" && request.method !== "HEAD") {
     const now = new Date();
@@ -24,7 +24,7 @@ export async function owner(request: Request) {
           "INSERT INTO usage_budgets(bucket,used,max_count,expires_at) VALUES(?,1,80,?) ON CONFLICT(bucket) DO UPDATE SET used=used+1",
         )
         .bind(
-          `api-minute:${user.userId}:${now.toISOString().slice(0, 16)}`,
+          `api-minute:${user.id}:${now.toISOString().slice(0, 16)}`,
           new Date(now.getTime() + 3600000).toISOString(),
         )
         .run();
@@ -37,7 +37,7 @@ export async function owner(request: Request) {
       throw error;
     }
   }
-  return user.userId;
+  return user.id;
 }
 export function store() {
   if (!env.DB)

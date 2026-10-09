@@ -1,6 +1,8 @@
 # Security and deployment
 
-Production must run behind the Sites dispatcher. It authenticates visitors and strips/replaces identity headers before requests reach the Worker. Do not expose this Worker directly on another host: accepting those headers without a trusted gateway would permit impersonation. GitHub hosts the source; the app's live backend remains on Sites and D1.
+Production runs directly on Cloudflare Workers. Better Auth validates signed session cookies against D1; no incoming identity header is trusted. Authentication fails closed if the URL, secret or database binding is missing. Auth endpoints enforce trusted origins, bounded JSON requests, and database-backed IP rate limits using Cloudflare's `cf-connecting-ip` header. Sessions expire after seven days and are revoked on sign-out. Cookies are HttpOnly and Secure on HTTPS, with SameSite=Lax.
+
+Passwords use Better Auth's scrypt implementation; raw passwords are never stored. Accounts require 12–128 characters. Email is an unverified login identifier, never proof of identity or tenancy. Account linking is disabled, and email verification/recovery are not yet enabled. The immutable authenticated user ID owns all application records. Do not import previous workspace records by matching unverified email addresses.
 
 `GEMINI_API_KEY` is a hosted secret. Never commit it, prefix it with `NEXT_PUBLIC_`/`VITE_`, or return it from an API. A user's nonempty personal key takes precedence, remains in page memory, and is exchanged for a constrained ephemeral token. A rejected personal key never falls back silently to the shared project. Reload clears personal keys. Both key types are sent only to Google's API by the server.
 

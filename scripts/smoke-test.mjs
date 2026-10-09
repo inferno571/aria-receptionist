@@ -1,17 +1,11 @@
 import assert from "node:assert/strict";
+import { localSession } from "./local-auth.mjs";
 
 // This workflow writes synthetic records only to an explicitly local preview.
 const base = process.env.ARIA_TEST_URL || "http://127.0.0.1:5173";
 if (!["localhost", "127.0.0.1"].includes(new URL(base).hostname))
   throw new Error("Use a local preview for this test.");
-const login = await fetch(base + "/signin-with-chatgpt?return_to=/", {
-  redirect: "manual",
-});
-const cookie = login.headers
-  .getSetCookie()
-  .map((x) => x.split(";")[0])
-  .join("; ");
-assert.ok(cookie, "Local development authentication cookie is available");
+const { cookie } = await localSession(base);
 async function api(
   path,
   data,
@@ -36,11 +30,12 @@ async function api(
 }
 assert.equal((await fetch(base + "/api/dashboard")).status, 401);
 assert.equal(
-  (await api("/api/calls", {}, "POST", { Origin: "https://unrelated.example" }))
+  (await api("/api/settings", {}, "PUT", { Origin: "https://unrelated.example" }))
     .status,
   403,
 );
-assert.equal((await api("/api/live-token", {})).status, 428);
+const missingKey = await api("/api/live-token", {});
+assert.equal(missingKey.status, 428, JSON.stringify(missingKey.value));
 const dashboard = await api("/api/dashboard");
 assert.equal(dashboard.status, 200);
 const date = new Date(

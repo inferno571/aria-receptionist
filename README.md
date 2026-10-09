@@ -1,28 +1,30 @@
 # Aria — AI voice receptionist
 
-[Live app](https://aria-voice-receptionist.inferno-sooden.chatgpt.site) · [Architecture](docs/architecture.md) · [Security](SECURITY.md)
+[Architecture](docs/architecture.md) · [Security](SECURITY.md)
 
 Aria talks to customers, checks a salon's availability, and books confirmed appointments. Each signed-in user gets a separate workspace with an appointment calendar, transcripts, and follow-up notes.
 
-Built with **Gemini 3.8 Live**, TypeScript, React, Vinext, Cloudflare Workers and D1/SQLite. The interface uses self-hosted Space Grotesk. No OpenAI API is used.
+Built with **Gemini 3.8 Live**, TypeScript, React, Vinext, Cloudflare Workers and D1/SQLite. The interface uses self-hosted Open Sans. No OpenAI API is used.
 
 ## Run locally
 
-Requires Node.js 24+ and npm. On a fresh database, run both migrations in order once:
+Requires Node.js 24+ and npm:
 
 ```powershell
 npm ci
-npm run build
-node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0000_narrow_timeslip.sql
-node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1 execute DB --local --config dist/server/wrangler.json --persist-to .wrangler/state --file drizzle/0001_spicy_baron_zemo.sql
+npm run setup:local
 npm run dev
 ```
 
-Both migrations are already applied in the original development checkout. Open the URL printed by the server. Loopback development uses a simulated sign-in; production uses Sites' authenticated identity gateway. Local data is stored in ignored `.wrangler/state` and is never uploaded with the source.
+Open `http://127.0.0.1:5173` and create an account. Local setup creates a random ignored `.dev.vars` authentication secret and applies pending migrations to `.wrangler/standalone`. Local and production use the same real authentication flow; there is no mock sign-in or trusted identity header. Local data and secrets never go to GitHub.
+
+## Accounts
+
+Email/password accounts use Better Auth, scrypt password hashing, signed HttpOnly session cookies, server-side revocation, and database-backed sign-in limits. Passwords must contain at least 12 characters. Tenancy is based on the immutable authenticated user ID. Email ownership is not verified, no accounts are linked by email, and email password recovery is not yet configured. Save your password in a password manager.
 
 ## Gemini connection
 
-Configure `GEMINI_API_KEY` as a **hosted secret** for shared voice access. For local use, copy `.env.example` to `.env` and provide your own key. Never use `NEXT_PUBLIC_` or `VITE_` for secrets.
+Configure `GEMINI_API_KEY` as a **hosted secret** for shared voice access. For local use, edit ignored `.dev.vars` and provide your own key. Never use `NEXT_PUBLIC_` or `VITE_` for secrets.
 
 Users may enter a personal key in **Configure assistant**. It takes precedence over the shared connection, remains in page memory only, and clears on reload. A rejected personal key never silently uses the shared key. Clear the field to use shared access again. Keys are exchanged server-side with Google for constrained, single-use ephemeral tokens; long-lived keys are never returned by an API or stored in the database.
 
@@ -49,12 +51,13 @@ npm test
 npm run typecheck
 npm run build
 # With the local server running:
+node scripts/auth-smoke-test.mjs
 node scripts/smoke-test.mjs
 # Optional: enter a real key through hidden stdin, never as a command argument:
 node scripts/verify-provider.mjs
 ```
 
-The suite contains 29 tests covering booking races, isolation, time zones, PCM, shared quotas, expiry, deletion, transcript limits, parsing and recovery. API smoke checks use local D1. On 2026-10-07, a real provider check verified ephemeral-token issuance, audio generation, and an availability tool call with `gemini-3.8-live`, using synthetic conversation content and no microphone.
+The suite contains 29 tests covering booking races, isolation, time zones, PCM, shared quotas, expiry, deletion, transcript limits, parsing and recovery. API smoke checks use local D1. Authentication integration checks cover registration, sign-in, isolated identities, forged headers/cookies, CSRF, session revocation and rate limits. On 2026-10-07, a real provider check verified ephemeral-token issuance, audio generation, and an availability tool call with `gemini-3.8-live`, using synthetic conversation content and no microphone.
 
 Actual microphone/device behavior, booking quality, forced-network resumption, latency and provider quota exhaustion still need the [manual evaluation](docs/evaluation.md). No measured accuracy, savings or latency SLA is claimed. GitHub Actions runs tests, TypeScript checks and a production build on pushes and pull requests.
 
@@ -66,7 +69,15 @@ Services, two stylists, opening hours and IST are defined in `lib/domain.ts`. Bu
 
 ## Deployment
 
-GitHub hosts the source. **GitHub Pages cannot run this Worker/D1 backend.** Deploy through Sites, apply the tracked Drizzle migrations, configure secrets in the hosting environment, and preserve the trusted identity gateway. Never expose this Worker directly elsewhere without implementing verified authentication. A GitHub push runs CI; it does not automatically redeploy the live app.
+The app now targets **Cloudflare Workers with D1** directly. It does not depend on ChatGPT sign-in or a `.chatgpt.site` domain. The hosting account must be authenticated before deployment. GitHub Pages cannot run this backend.
+
+1. Run `npx wrangler login` and create a database with `npx wrangler d1 create aria-receptionist-db`.
+2. Replace the local placeholder database ID in `wrangler.jsonc` with the returned ID.
+3. Set `vars.BETTER_AUTH_URL` in that file to the Worker's actual HTTPS URL.
+4. Configure a fresh random `BETTER_AUTH_SECRET` (32+ bytes) and the optional shared `GEMINI_API_KEY` using `npx wrangler secret put <NAME>`.
+5. Run `npm run deploy`. It validates configuration, builds, applies pending remote migrations, and publishes the built Worker.
+
+A GitHub push runs checks; it does not automatically deploy. The previous Sites project reference is preserved in `docs/legacy-sites.json` for recovery. Existing Sites accounts/data are not automatically linked to new accounts; migrating any existing records requires an explicit verified ownership mapping. The old database is not deleted by this migration.
 
 ## Source guide
 

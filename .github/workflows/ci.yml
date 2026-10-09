@@ -18,4 +18,14 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm test
       - run: npm run typecheck
+      - run: npm run setup:local
       - run: npm run build
+      - name: Authentication and booking integration checks
+        timeout-minutes: 3
+        run: |
+          npm start > /tmp/aria-worker.log 2>&1 &
+          aria_pid=$!
+          trap 'kill "$aria_pid" 2>/dev/null || true' EXIT
+          node scripts/wait-for-local.mjs
+          node scripts/auth-smoke-test.mjs
+          node scripts/smoke-test.mjs

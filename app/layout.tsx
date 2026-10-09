@@ -1,14 +1,13 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import "@fontsource-variable/space-grotesk";
+import "@fontsource/open-sans/400.css";
+import "@fontsource/open-sans/600.css";
+import "@fontsource/open-sans/700.css";
 
 export const metadata: Metadata = {
   title: "Aria · AI Voice Receptionist",
   description:
     "Your AI reception desk: live conversations, reliable appointments, and private call history, powered by Gemini.",
-  other: {
-    "codex-preview": "development",
-  },
   icons: {
     icon: "/favicon.svg",
     shortcut: "/favicon.svg",

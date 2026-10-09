@@ -554,10 +554,6 @@ export default function Receptionist() {
                 Take calls, manage appointments, and follow up in one place.
               </p>
             </div>
-            <span className="outline-badge">
-              <span className="status-dot" />
-              Gemini 3.8 Live
-            </span>
           </div>
           {loadError && (
             <div className="error-banner" role="alert">
@@ -939,7 +935,21 @@ export default function Receptionist() {
               first hello.
             </span>
             <span>{business.address} · Asia/Kolkata</span>
-            <a href="/signout-with-chatgpt?return_to=/">Sign out</a>
+            <button
+              className="quiet-button"
+              disabled={active}
+              onClick={async () => {
+                const response = await fetch("/api/auth/sign-out", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: "{}",
+                });
+                if (response.ok) window.location.assign("/sign-in");
+                else toast.error("Could not sign out. Please try again.");
+              }}
+            >
+              Sign out
+            </button>
           </footer>
         </div>
       </main>

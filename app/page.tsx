@@ -1,7 +1,7 @@
-import { requireChatGPTUser } from "./chatgpt-auth";
+import { requireUser } from "@/lib/auth";
 import Receptionist from "./receptionist";
 export const dynamic = "force-dynamic";
 export default async function Home() {
-  await requireChatGPTUser("/");
+  await requireUser();
   return <Receptionist />;
 }

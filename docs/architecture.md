@@ -41,9 +41,9 @@ An output generation prevents audio waiting on `AudioContext.resume()` from play
 
 The model proposes actions. The API independently checks authentication, owner scope, service/staff membership, calendar validity, office hours, future time, 15-minute alignment, explicit confirmation flag, contact fields, idempotency and occupancy. It exposes only a small tool allowlist. The model cannot execute SQL or choose an owner identifier.
 
-The confirmation flag is validated by the server but the fact that a caller gave spoken consent is model-interpreted. This prototype does not claim a cryptographic or independently verified voice-consent guarantee. The prompt requires a readback followed by explicit confirmation. Manual evaluation must test corrections and ambiguous assent before customer use.
+The confirmation flag is validated by the server but the fact that a caller gave spoken consent is model-interpreted. The application does not claim a cryptographic or independently verified voice-consent guarantee. The prompt requires a readback followed by explicit confirmation. Manual evaluation must test corrections and ambiguous assent before customer use.
 
-Browser-provided transcripts are owner-visible records, not tamper-proof audit evidence. No raw audio is retained. The browser key field remains in React memory and is exchanged by the server; the browser receives only the short-lived credential. Production uses Sites identity; the loopback mock sign-in exists only in development.
+Browser-provided transcripts are owner-visible records, not tamper-proof audit evidence. No raw audio is retained. The browser key field remains in React memory and is exchanged by the server; the browser receives only the short-lived credential. Production and development both use Better Auth with D1-backed sessions. Incoming Sites identity headers are ignored. Owner scope derives from a validated session user ID; email is unverified and is never used to link accounts or import previous workspaces.
 
 ## Deliberate limits and next steps
 

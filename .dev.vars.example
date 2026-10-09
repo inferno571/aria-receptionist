@@ -1,0 +1,5 @@
+# Copy to .dev.vars or run npm run setup:local to generate a random local secret.
+BETTER_AUTH_SECRET=
+BETTER_AUTH_URL=http://127.0.0.1:5173
+# Optional; users can also enter their own key in Configure assistant.
+GEMINI_API_KEY=

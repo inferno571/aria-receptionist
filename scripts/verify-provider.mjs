@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import { localSession } from "./local-auth.mjs";
 
 // Read a key from hidden stdin, never from command arguments or source files.
 process.stdin.setRawMode?.(true);
@@ -19,13 +20,7 @@ const key = await new Promise((resolve) => {
   process.stdin.resume();
 });
 const base = "http://127.0.0.1:5173";
-const login = await fetch(base + "/signin-with-chatgpt?return_to=/", {
-  redirect: "manual",
-});
-const cookie = login.headers
-  .getSetCookie()
-  .map((x) => x.split(";")[0])
-  .join("; ");
+const { cookie } = await localSession(base);
 async function api(path, data, method = "POST") {
   const r = await fetch(base + path, {
     method,
