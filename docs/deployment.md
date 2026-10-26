@@ -1,5 +1,9 @@
 # Independent Cloudflare deployment
 
+Live app: https://aria-receptionist.inferno-sooden.workers.dev
+
+The Cloudflare deployment was verified on October 26, 2026: account registration and password sign-in, secure session cookies and revocation, workspace isolation, origin protection, and a real Gemini voice response with an availability tool call. The shared Gemini key and authentication signing secret are stored as Cloudflare Worker secrets, outside the repository.
+
 ## Run locally
 
 Requires Node.js 24+ and npm:

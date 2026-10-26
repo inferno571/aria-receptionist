@@ -6,6 +6,9 @@
   "compatibility_date": "2026-05-15",
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
+  "vars": {
+    "BETTER_AUTH_URL": "https://aria-receptionist.inferno-sooden.workers.dev",
+  },
   "d1_databases": [
     {
       "binding": "DB",
