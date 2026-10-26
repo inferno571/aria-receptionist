@@ -7,7 +7,7 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": true,
   "vars": {
-    "BETTER_AUTH_URL": "https://aria-receptionist.inferno-sooden.workers.dev",
+    "BETTER_AUTH_URL": "https://aria-receptionist.aria-desk.workers.dev",
   },
   "d1_databases": [
     {
