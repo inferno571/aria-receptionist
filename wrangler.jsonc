@@ -1,6 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "aria-receptionist",
+  "account_id": "5e87d22b2ad04838a0a7caf69b6c27dc",
   "main": "./worker.ts",
   "compatibility_date": "2026-05-15",
   "compatibility_flags": ["nodejs_compat"],
@@ -9,7 +10,7 @@
     {
       "binding": "DB",
       "database_name": "aria-receptionist-db",
-      "database_id": "00000000-0000-4000-8000-000000000001",
+      "database_id": "10112354-8eb4-4bd7-a9f9-3c8fe02d3285",
       "migrations_dir": "drizzle",
     },
   ],

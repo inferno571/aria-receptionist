@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
-const config = JSON.parse(readFileSync("wrangler.jsonc", "utf8"));
+import JSON5 from "json5";
+const config = JSON5.parse(readFileSync("wrangler.jsonc", "utf8"));
 if (
   !config.d1_databases?.[0]?.database_id ||
   config.d1_databases[0].database_id.startsWith("00000000-")
